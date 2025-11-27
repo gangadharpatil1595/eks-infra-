@@ -1,39 +1,54 @@
-name: Terraform EKS
+name: Terraform EKS Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
 
 jobs:
   terraform:
+    name: Terraform Apply
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: terraform/infra-cluster-environment
 
     steps:
-      - name: Checkout
+
+      # Step 1: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
+      # Step 2: Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
 
-      - name: Configure AWS credentials
+      # Step 3: Configure AWS access
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+          aws-region: ${{ secrets.AWS_REGION }}
 
+      # Step 4: Terraform Init
       - name: Terraform Init
         run: terraform init
 
+      # Step 5: Terraform Validate
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Step 6: Terraform Plan
+        # Using var file
       - name: Terraform Plan
         run: terraform plan -var-file="../infra-global-variables/dev.tfvars"
 
+      # Step 7: Terraform Apply only when push to main
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file="../infra-global-variables/dev.tfvars"
